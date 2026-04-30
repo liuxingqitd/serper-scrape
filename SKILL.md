@@ -5,191 +5,78 @@ description: 调用 Serper API 搜索和抓取网页内容。支持两种模式�
 
 # Serper Search & Scrape Skill
 
-使用 Serper API 进行网页搜索和内容抓取。
+通过 Serper API 进行网页搜索和内容抓取。使用前需设置 `SERPER_API_KEY` 环境变量。
 
-## 环境变量
+> **安全警告**：永远不要在代码、配置或命令行参数中硬编码 API KEY。始终通过环境变量读取。
 
-使用前请设置环境变量：
+## 使用方式
+
+优先使用 `scripts/` 目录下的辅助脚本进行 API 调用，而非直接写 curl 命令：
+
+### 搜索
 ```bash
-export SERPER_API_KEY="your-api-key"
+bash <skill_path>/scripts/serper-search.sh "<query>" [gl] [hl] [tbs] [num] [page]
 ```
 
-或在 shell 配置文件中添加：
+### 抓取
 ```bash
-# ~/.zshrc 或 ~/.bashrc
-export SERPER_API_KEY="a41b4402bea6ca7647f39817ae028fce6c86e7f6"
+bash <skill_path>/scripts/serper-scrape.sh "<url>" [includeMarkdown]
 ```
+
+其中 `<skill_path>` 是此 skill 的安装目录。如不确定，可通过 `which serper-scrape` 或查询 Claude skills 目录定位。
 
 ---
 
-## 功能一：搜索 (Search)
+## API 参考
 
-根据关键词搜索网页，返回搜索结果列表。
+### 搜索 (Search)
 
-### API 配置
-
-- **Endpoint**: `https://google.serper.dev/search`
-- **Method**: POST
-- **Headers**:
-  - `X-API-KEY`: 从环境变量 `SERPER_API_KEY` 读取
-  - `Content-Type`: `application/json`
-
-### 请求参数
+**Endpoint**: `https://google.serper.dev/search` (POST)
 
 | 参数 | 类型 | 必需 | 说明 |
 |------|------|------|------|
 | `q` | string | 是 | 搜索关键词 |
-| `gl` | string | 否 | 国家代码，如 `us`、`cn`、`jp`，默认 `us` |
-| `hl` | string | 否 | 语言代码，如 `en`、`zh-cn`、`ja`，默认 `en` |
-| `tbs` | string | 否 | 时间范围筛选（见下表） |
-| `num` | number | 否 | 返回结果数量，默认 10，最大 100 |
+| `gl` | string | 否 | 国家代码，默认 `us` |
+| `hl` | string | 否 | 语言代码，默认 `en` |
+| `tbs` | string | 否 | 时间范围筛选 |
+| `num` | number | 否 | 返回结果数，默认 10，最大 100 |
 | `page` | number | 否 | 页码，默认 1 |
 
-### 时间范围 (tbs) 参数值
+**时间范围 (tbs)**: `qdr:h`(1小时) / `qdr:d`(24小时) / `qdr:w`(1周) / `qdr:m`(1个月) / `qdr:y`(1年)
 
-| 值 | 含义 |
-|----|------|
-| `qdr:h` | 过去 1 小时 |
-| `qdr:d` | 过去 24 小时 |
-| `qdr:w` | 过去 1 周 |
-| `qdr:m` | 过去 1 个月 |
-| `qdr:y` | 过去 1 年 |
+**响应关键字段**:
+- `searchParameters` - 请求参数回显
+- `knowledgeGraph` - 知识图谱（如存在）
+- `organic[]` - 自然搜索结果列表（title, link, snippet, position）
+- `peopleAlsoAsk[]` - 相关问答
+- `relatedSearches[]` - 相关搜索
 
-### 使用示例
+### 抓取 (Scrape)
 
-```bash
-# 基础搜索
-curl --location 'https://google.serper.dev/search' \
---header "X-API-KEY: $SERPER_API_KEY" \
---header 'Content-Type: application/json' \
---data '{"q":"apple inc"}'
-
-# 搜索过去一个月的内容
-curl --location 'https://google.serper.dev/search' \
---header "X-API-KEY: $SERPER_API_KEY" \
---header 'Content-Type: application/json' \
---data '{"q":"OpenAI GPT-5","tbs":"qdr:m","gl":"us","hl":"en"}'
-
-# 中文搜索
-curl --location 'https://google.serper.dev/search' \
---header "X-API-KEY: $SERPER_API_KEY" \
---header 'Content-Type: application/json' \
---data '{"q":"人工智能最新进展","gl":"cn","hl":"zh-cn","tbs":"qdr:w"}'
-```
-
-### 响应结构
-
-```json
-{
-  "searchParameters": {
-    "q": "apple inc",
-    "gl": "us",
-    "hl": "en",
-    "type": "search"
-  },
-  "knowledgeGraph": {
-    "title": "Apple",
-    "type": "Technology company",
-    "description": "...",
-    "attributes": { ... }
-  },
-  "organic": [
-    {
-      "title": "Apple",
-      "link": "https://www.apple.com/",
-      "snippet": "Discover the innovative world of Apple...",
-      "position": 1
-    },
-    ...
-  ],
-  "peopleAlsoAsk": [ ... ],
-  "relatedSearches": [ ... ]
-}
-```
-
----
-
-## 功能二：抓取 (Scrape)
-
-获取指定 URL 的完整页面内容，返回 markdown 格式。
-
-### API 配置
-
-- **Endpoint**: `https://scrape.serper.dev`
-- **Method**: POST
-- **Headers**:
-  - `X-API-KEY`: 从环境变量 `SERPER_API_KEY` 读取
-  - `Content-Type`: `application/json`
-
-### 请求参数
+**Endpoint**: `https://scrape.serper.dev` (POST)
 
 | 参数 | 类型 | 必需 | 说明 |
 |------|------|------|------|
-| `url` | string | 是 | 目标网页完整 URL |
+| `url` | string | 是 | 目标网页完整 URL（需含 `https://`） |
 | `includeMarkdown` | boolean | 否 | 返回 markdown 格式，默认 `true` |
 
-### 使用示例
-
-```bash
-curl --location 'https://scrape.serper.dev' \
---header "X-API-KEY: $SERPER_API_KEY" \
---header 'Content-Type: application/json' \
---data '{"url":"https://apple.com","includeMarkdown":true}'
-```
-
-### 响应结构
-
-```json
-{
-  "markdown": "页面的 markdown 内容...",
-  "text": "页面的纯文本内容...",
-  "metadata": { ... }
-}
-```
+**响应关键字段**: `markdown`(页面 markdown 内容) / `text`(纯文本) / `metadata`(元数据)
 
 ---
 
-## 组合工作流：搜索 + 抓取
+## 组合工作流
 
-**推荐流程**：先搜索获取相关链接，再抓取感兴趣的页面内容。
-
-### 步骤
-
-1. **搜索**：使用 search API 根据关键词获取结果列表
-2. **筛选**：从 `organic` 结果中选择最相关的链接
-3. **抓取**：对选中的链接调用 scrape API 获取完整内容
-
-### 示例场景
-
-用户请求："搜索最近一周关于 Claude 4 的新闻，并获取详细内容"
-
-**执行步骤**：
+**推荐流程**：先搜索获取链接 → 筛选最相关的 → 抓取详情页内容。
 
 ```bash
 # 步骤 1: 搜索
-curl --location 'https://google.serper.dev/search' \
---header "X-API-KEY: $SERPER_API_KEY" \
---header 'Content-Type: application/json' \
---data '{"q":"Claude 4 Anthropic","tbs":"qdr:w","num":5}'
+bash scripts/serper-search.sh "Claude 4 Anthropic" "us" "en" "qdr:w" 5
 
-# 步骤 2: 从搜索结果中提取 organic[].link
+# 步骤 2: 从 organic[].link 提取感兴趣的 URL
 
-# 步骤 3: 抓取每个感兴趣的链接
-curl --location 'https://scrape.serper.dev' \
---header "X-API-KEY: $SERPER_API_KEY" \
---header 'Content-Type: application/json' \
---data '{"url":"<从搜索结果获取的链接>","includeMarkdown":true}'
+# 步骤 3: 抓取每个链接
+bash scripts/serper-scrape.sh "https://example-article.com"
 ```
-
----
-
-## 典型用例
-
-1. **时效性搜索**：搜索最近的新闻、公告、更新
-2. **深度研究**：搜索主题 → 抓取多个来源 → 综合分析
-3. **竞品分析**：搜索竞品信息 → 抓取详情页
-4. **内容获取**：直接抓取已知 URL 的内容
-5. **多语言搜索**：通过 `gl` 和 `hl` 参数搜索不同语言/地区的内容
 
 ---
 
@@ -197,54 +84,22 @@ curl --location 'https://scrape.serper.dev' \
 
 ### 1. 抓取数量限制
 
-**每次搜索最多抓取 5 个网页**，以降低 API 调用成本。
-
-- 如果搜索结果超过 5 条，只选择最相关的前 5 个进行抓取
-- 如用户明确要求更多，需告知限制原因并确认是否继续
+**每次搜索最多抓取 5 个网页**。如搜索结果超过 5 条，只选择最相关的前 5 个。若用户明确要求更多，需告知限制并确认。
 
 ### 2. 内容保存规则
 
-**所有抓取的网页内容必须处理后保存到 Obsidian**。
-
-#### 保存目录分类
+所有抓取的网页内容必须处理后保存到 Obsidian：
 
 | 内容类型 | 保存目录 |
 |---------|---------|
-| 普通内容（新闻、观点、案例等） | `/Users/liuxingqi/tars/Resources/Web-Search/` |
-| 技术/工具类（官网文档、API、Wiki 等） | `/Users/liuxingqi/tars/Knowledge/` |
-
-#### 判断技术类内容的标准
-
-以下类型归类为技术/工具类，保存到 `knowledge` 目录：
-- 官方文档、API 文档
-- GitHub README、Wiki
-- 技术教程、配置指南
-- 工具使用说明
-- 编程语言参考手册
+| 普通内容（新闻、观点、案例等） | `~/tars/Resources/Web-Search/` |
+| 技术/工具类（官方文档、API、GitHub README、教程等） | `~/tars/Knowledge/` |
 
 ### 3. 内容处理规则
 
-抓取的原始内容必须经过处理，**保留有价值信息，去除噪音**。
+**必须保留**：案例和示例、核心观点、事实和数据、金句精华、引用链接、原文链接
 
-#### 必须保留
-
-- ✅ 完整的案例和示例
-- ✅ 核心观点和论点
-- ✅ 事实和数据
-- ✅ 金句和精华语录
-- ✅ 引用的资料链接
-- ✅ 原文网站链接（作为来源标注）
-
-#### 必须去除
-
-- ❌ 导航菜单、页脚
-- ❌ 广告内容
-- ❌ 图片链接（除非是关键图表）
-- ❌ 视频嵌入链接
-- ❌ 社交分享按钮
-- ❌ 评论区（除非评论包含有价值信息）
-- ❌ 相关推荐列表
-- ❌ Cookie 提示、弹窗内容
+**必须去除**：导航菜单/页脚、广告、图片链接（关键图表除外）、视频嵌入、社交按钮、评论区（有价值评论除外）、相关推荐、Cookie 弹窗
 
 ### 4. 保存文件格式
 
@@ -261,19 +116,15 @@ tags: [web-search, {{主题标签}}]
 > 来源：[{{网站名称}}]({{原始URL}})
 
 ## 一句话总结
-
 {{核心要点概括}}
 
 ## 关键内容
-
 {{处理后的正文内容}}
 
 ## 金句/要点
-
 - {{提取的金句或关键观点}}
 
 ## 引用链接
-
 - [{{链接标题}}]({{URL}})
 ```
 
@@ -281,10 +132,8 @@ tags: [web-search, {{主题标签}}]
 
 ## 注意事项
 
-- 确保环境变量 `SERPER_API_KEY` 已设置
-- 搜索时合理使用 `tbs` 参数缩小时间范围，提高结果相关性
-- 抓取 URL 必须是完整路径，包含 `https://` 前缀
-- 某些网站可能有反爬措施，抓取失败时告知用户
-- 搜索+抓取组合会消耗多次 API 调用，注意配额
-- **每次最多抓取 5 个网页**
-- **所有内容必须处理后保存到对应 Obsidian 目录**
+- 确保 `SERPER_API_KEY` 已设置，否则脚本会报错
+- 搜索时合理使用 `tbs` 缩小时间范围，提高结果相关性
+- 抓取 URL 必须是完整路径（含 `https://`）
+- 某些网站有反爬措施，抓取失败时告知用户
+- 组合搜索+抓取会消耗多次 API 调用，注意配额
