@@ -38,6 +38,7 @@ BODY=$(cat <<JSON
   "hl": "$HL",
   "num": $NUM,
   "page": $PAGE
+}
 JSON
 )
 
